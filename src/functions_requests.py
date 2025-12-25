@@ -25,6 +25,7 @@ import time
 from urllib.parse import urlparse
 import datetime
 from tqdm import tqdm
+    
 
 def assess_availability(url, allow_redirect_as_success=True):
     try:
