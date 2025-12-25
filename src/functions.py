@@ -26,15 +26,15 @@ from urllib.parse import urlparse
 import datetime
 from tqdm import tqdm
 
-def assess_availability(url):
+def assess_availability(url, allow_redirect_as_success=True):
     try:
         start_time = time.time()
-        resp = requests.get(url, timeout=10)
+        resp = requests.get(url, timeout=10, allow_redirects=False)
         response_time = time.time() - start_time
         return {
             'status_code': resp.status_code,
             'response_time': response_time,
-            'is_available': resp.status_code == 200
+            'is_available': resp.status_code in [200, 301, 302] if allow_redirect_as_success else resp.status_code == 200
         }
     except requests.RequestException as e:
         return {
