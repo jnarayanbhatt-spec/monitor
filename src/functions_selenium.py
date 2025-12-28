@@ -4,6 +4,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from bs4 import BeautifulSoup
 import time
 
 def get_webdriver():
@@ -14,11 +15,12 @@ def get_webdriver():
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     return driver
 
-def assess_availability(url, driver, timeout=30):
+def assess_availability(url, driver=None, timeout=30):
     try:
         start_time = time.time()
+        if driver is None:
+            driver = get_webdriver()
         driver.get(url)
-        
         # Wait for the page to load (wait for body element)
         WebDriverWait(driver, timeout).until(
             EC.presence_of_element_located((By.TAG_NAME, "body"))
@@ -48,7 +50,7 @@ def assess_availability(url, driver, timeout=30):
             'error': str(e)
         }
 
-def assess_security(url, driver, timeout=30):
+def assess_security(url, driver=None, timeout=30):
     # Selenium cannot directly check SSL certificates or response headers.
     # Omitting SSL info and security headers for now.
     # If needed, install selenium-wire for header inspection.
@@ -61,8 +63,10 @@ def assess_security(url, driver, timeout=30):
         'security_headers': security_headers
     }
 
-def assess_performance(url, driver, timeout=30):
+def assess_performance(url, driver=None, timeout=30):
     try:
+        if driver is None:
+            driver = get_webdriver()
         start_time = time.time()
         driver.get(url)
         
@@ -82,8 +86,10 @@ def assess_performance(url, driver, timeout=30):
     except Exception as e:
         return {'error': str(e)}
 
-def assess_accessibility(url, driver, timeout=30):
+def assess_accessibility(url, driver=None, timeout=30):
     try:
+        if driver is None:
+            driver = get_webdriver()
         driver.get(url)
         
         # Wait for the page to load

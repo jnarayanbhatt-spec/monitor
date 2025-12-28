@@ -2,41 +2,55 @@ from functions_requests import fetch_urls_from_sitemap, assess_security, get_tab
 from functions_selenium import get_webdriver, assess_availability, assess_performance, assess_accessibility
 import os
 import pandas as pd
-
+from typing import Union
+from tqdm import tqdm
+from urllib.parse import urlparse
+# import json
 
 DOMAIN = "./domains.txt"
 DATA_DIR = "data"
+
+
+def read_json_file(file_path: str) -> Union[dict, None]:
+    if not os.path.exists(file_path):
+        return None
+    with open(file_path, "r") as f:
+        import json
+        return json.loads(f.read())
+    
+def write_json_file(file_path: str, data: dict):
+    with open(file_path, "w") as f:
+        import json
+        json.dump(data, f, indent=4)
+        
+def assess_urls(urls):
+    
+    results = {}
+    for url in tqdm(urls, desc=f"Assessing URL from domain {urlparse(urls[0]).hostname}"):
+        results[url] = {
+            'availability': assess_availability(url),
+            # 'security': assess_security(url),
+            # 'performance': assess_performance(url),
+            'accessibility': assess_accessibility(url)
+        }
+    return results
+
 
 
 def load_url_from_domain(domain):
     urls = fetch_urls_from_sitemap(domain)
     return urls
 
-def run_assessments(url, engine='requests', driver=None):
-    if engine == 'requests':
-        availability = assess_availability(url)
-        security = assess_security(url)
-        performance = assess_performance(url)
-        accessibility = assess_accessibility(url)
-    elif engine == 'selenium':
-        if driver is None:
-            driver = get_webdriver()
-        availability = assess_availability(url, driver)
-        security = assess_security(url, driver)
-        performance = assess_performance(url, driver)
-        accessibility = assess_accessibility(url, driver)
-    else:
-        raise ValueError("Unsupported engine. Use 'requests' or 'selenium'.")
-    
-    return {
-        'availability': availability,
-        'security': security,
-        'performance': performance,
-        'accessibility': accessibility
-    }
-
 
 def main():
+    
+    def update_assessments(existing, new):
+        for url, data in new.items():
+            if url not in existing:
+                existing[url] = data
+            else:
+                existing[url].update(data)
+        return existing
     
     domains = []
     with open(DOMAIN, "r") as f:
@@ -65,18 +79,17 @@ def main():
         all_urls = urls
         if len(all_urls) == 0:
             continue
-        assessments = assess_urls(all_urls)
         assessments_path = f"{DATA_DIR}/json/assessments/{domain}.json"
-        with open(assessments_path, "w") as f:
-            import json
-            json.dump(assessments, f, indent=4)
+        existing_assessments = read_json_file(assessments_path) or {}
+        assessments = assess_urls(all_urls)        
+        update_assessments(existing_assessments, assessments)
+        write_json_file(assessments_path, existing_assessments)
 
     json_files = os.listdir(f"{DATA_DIR}/json/assessments/")
     for file_name in json_files:
         domain = file_name.replace(".json", "").replace(".gov.in", "")
-        with open(f"{DATA_DIR}/json/assessments/{file_name}", "r") as f:
-            import json
-            assessments = json.load(f)
+        json_path = f"{DATA_DIR}/json/assessments/{file_name}"
+        assessments = read_json_file(json_path)
 
         tables = get_tables(assessments)
         
